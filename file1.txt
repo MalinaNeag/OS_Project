@@ -1,0 +1,36 @@
+void printArgumentsInfo(char *path) {
+    
+    struct stat filestat;
+
+    printf("\n%s", path);
+    
+    if(lstat(path, &filestat) == -1) {
+        printf("Error: %s\n", strerror(errno));
+        return;
+    }
+
+    if(S_ISREG(filestat.st_mode)) {
+        printf("- REGULAR FILE\n");
+        char options[10];
+        menu_RegularFiles(options);
+        printRegularFileInfo(path, options);
+    }
+
+    else if(S_ISDIR(filestat.st_mode)) {
+        printf(" - DIRECTORY\n");
+        char options[10];
+        menu_Directory(options);
+    }
+
+    else if(S_ISLNK(filestat.st_mode)) {
+        printf(" - SYMBOLIC LINK\n");
+        char options[10];
+        menu_SymbolicLink(options);
+        printSymbolicLinkInfo(path, options);
+    }
+
+    else {
+        printf("File type not supported.\n");
+    }
+
+}
