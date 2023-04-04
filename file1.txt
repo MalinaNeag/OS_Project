@@ -1,36 +1,81 @@
-void printArgumentsInfo(char *path) {
-    
-    struct stat filestat;
+/*
+This function uses the opendir function to open the directory specified by dirpath, and then reads each entry in the directory using the readdir
+function. For each entry, it constructs the full path by concatenating the directory path with the entry name, and then uses lstat to get the file 
+status.The function checks the file type using the S_ISDIR, S_ISLNK, S_ISREG, S_ISCHR, S_ISBLK, S_ISFIFO, and S_ISSOCK macros. For each file, it 
+checks the options specified by the user using strchr, and then prints the relevant information.
+For symbolic links, if the user specifies the t option, it uses readlink to get the target file of the symbolic link, and then uses lstat to get 
+the file
+*/
 
-    printf("\n%s", path);
+void printDirectory(char *dirpath, char *options) {
     
-    if(lstat(path, &filestat) == -1) {
+    DIR *dir;
+    struct dirent *entry;
+    struct stat filestat;
+    char filepath[256];
+    char linkpath[256];
+    char timebuf[80];
+    
+    if((dir = opendir(dirpath)) == NULL) {
         printf("Error: %s\n", strerror(errno));
         return;
     }
-
-    if(S_ISREG(filestat.st_mode)) {
-        printf("- REGULAR FILE\n");
-        char options[10];
-        menu_RegularFiles(options);
-        printRegularFileInfo(path, options);
+    
+    while((entry = readdir(dir)) != NULL) {
+        
+        snprintf(filepath, sizeof(filepath), "%s/%s", dirpath, entry->d_name);
+        
+        if(lstat(filepath, &filestat) == -1) {
+            printf("Error: %s\n", strerror(errno));
+            continue;
+        }
+        
+        if (S_ISDIR(filestat.st_mode)) {
+            printf("D ");
+        } else if (S_ISLNK(filestat.st_mode)) {
+            printf("L ");
+        } else if (S_ISREG(filestat.st_mode)) {
+            printf("- ");
+        } else if (S_ISCHR(filestat.st_mode)) {
+            printf("C ");
+        } else if (S_ISBLK(filestat.st_mode)) {
+            printf("B ");
+        } else if (S_ISFIFO(filestat.st_mode)) {
+            printf("F ");
+        } else if (S_ISSOCK(filestat.st_mode)) {
+            printf("S ");
+        }
+        
+        if (strchr(options, 'n') != NULL) {
+            printf("%s ", entry->d_name);
+        }
+        if (strchr(options, 'd') != NULL) {
+            printf("%ld ", filestat.st_size);
+        }
+        if (strchr(options, 'm') != NULL) {
+            strftime(timebuf, sizeof(timebuf), "%Y-%m-%d %H:%M:%S", localtime(&filestat.st_mtime));
+            printf("%s ", timebuf);
+        }
+        if (strchr(options, 'a') != NULL) {
+            printAccessRights(filestat);
+        }
+        if (S_ISLNK(filestat.st_mode) && strchr(options, 't') != NULL) {
+            ssize_t len = readlink(filepath, linkpath, sizeof(linkpath) - 1);
+            if (len != -1) {
+                linkpath[len] = '\0';
+                struct stat targetstat;
+                if (lstat(linkpath, &targetstat) == -1) {
+                    printf("\nError: %s\n", strerror(errno));
+                } else {
+                    printf("%ld ", targetstat.st_size);
+                }
+            } else {
+                printf("\nError: %s\n", strerror(errno));
+            }
+        }
+        
+        printf("\n");
     }
-
-    else if(S_ISDIR(filestat.st_mode)) {
-        printf(" - DIRECTORY\n");
-        char options[10];
-        menu_Directory(options);
-    }
-
-    else if(S_ISLNK(filestat.st_mode)) {
-        printf(" - SYMBOLIC LINK\n");
-        char options[10];
-        menu_SymbolicLink(options);
-        printSymbolicLinkInfo(path, options);
-    }
-
-    else {
-        printf("File type not supported.\n");
-    }
-
+    
+    closedir(dir);
 }
