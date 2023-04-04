@@ -9,14 +9,7 @@
 #include <grp.h>
 #include <time.h>
 
-/* TO BE IMPROVED THE READING WITH SCANF 
-if (scanf("-%9[^ \t\n\r\f\v]", options) != 1 && strchr(options, ' ')) {
-        perror("Invalid input! Example of usage: -ndl (- followed by desired letters given in menu)\n");
-        exit(2);
-    }
-If I want to use formatted input, it applied the options of the first arg to all the arguments
-*/
-// TO BE FIXED void printSymbolicLinkInfo--> it doesn't print anything before -l command; I have to change something in the implementation of this function 
+//Note: TO BE MODIFIED: the formatted scanf 
 int checkArguments(int argc) {
     if(argc < 2) {
         perror("Incorrect number of arguments! Usage: ./a.out <file/directory/link> ...\n");
@@ -25,25 +18,22 @@ int checkArguments(int argc) {
     return 0;
 }
 
-void menu_RegularFiles(char *options){
+void menu_RegularFiles(){
     printf("\n----  MENU ----\n");
     printf("-n: name\n-d: size\n-h: hard link count\n-m: time of last modification\n-a: access rights\n-l: create symbolic link\n");
     printf("\nPlease, enter your options: ");
-    scanf("%s", options);
 }
 
-void menu_Directory(char *options){
+void menu_Directory(){
     printf("\n----  MENU ----\n");
     printf("-n: name\n");
     printf("\nPlease, enter your options: ");
-    scanf("%s", options);
 }
 
-void menu_SymbolicLink(char *options){
+void menu_SymbolicLink(){
     printf("\n----  MENU ----\n");
     printf("-n: name\n-l: delete symbolic link\n-d: size of symbolic link\n-t: size of target file\n-a: access rights\n");
     printf("\nPlease, enter your options: ");
-    scanf("%s", options);
 }
 
 void printAccessRights(struct stat filestat) {
@@ -66,93 +56,133 @@ void printAccessRights(struct stat filestat) {
            (filestat.st_mode & S_IXOTH) ? "yes" : "no");
 }
 
-void printRegularFileInfo(char *filepath, char *options) {
+void printRegularFileInfo(char *filepath) {
+    
+    char options[20];
     
     struct stat filestat;
     
+    if(scanf("%20s", options) != 1) {
+        perror("Scanf failed.\n");
+        menu_RegularFiles();
+    }
+
+    int numberOfOptions = strlen(options);
+    
+
     if(lstat(filepath, &filestat) == -1) {
         printf("Error: %s\n", strerror(errno));
         return;
     }
-    
-    if (strchr(options, 'n') != NULL) {
-        printf("\nName: %s\n", filepath);
-    }
-    if (strchr(options, 'm') != NULL) {
-        printf("\nLast modified: %s", ctime(&filestat.st_mtime));
-    }
-    if (strchr(options, 'a') != NULL) {
-        printAccessRights(filestat);
-    }
-    if (strchr(options, 'h') != NULL) {
-        printf("\nHard link count: %ld\n", filestat.st_nlink);
-    }
-    if (strchr(options, 'd') != NULL) {
-        printf("\nSize: %ld bytes\n", filestat.st_size);
-    }
-    if (strchr(options, 'l') != NULL) {
-        printf("\nEnter name of symbolic link: ");
-        char linkname[256];
-        scanf("%s", linkname);
-        if (symlink(filepath, linkname) == -1) {
-            printf("\nError creating symbolic link: %s\n", strerror(errno));
-        } else {
-            printf("\nSymbolic link created: %s -> %s\n", linkname, filepath);
+
+    for(int i = 1; i < numberOfOptions; i++) {
+        
+        switch (options[i]) {
+            
+            case 'n':
+                printf("\nName: %s\n", filepath);
+                break;
+            
+            case 'm':
+                printf("\nLast modified: %s", ctime(&filestat.st_mtime));
+                break;
+            
+            case 'a':
+                printAccessRights(filestat);
+                break;
+            
+            case 'h':
+                printf("\nHard link count: %ld\n", filestat.st_nlink);
+                break;
+            
+            case 'd':
+                printf("\nSize: %ld bytes\n", filestat.st_size);
+                break;
+            
+            case 'l':
+                printf("\nEnter name of symbolic link: ");
+                char linkname[256];
+                scanf("%s", linkname);
+                
+                if (symlink(filepath, linkname) == -1) {
+                    printf("\nError creating symbolic link: %s\n", strerror(errno));
+                } else {
+                    printf("\nSymbolic link created: %s -> %s\n", linkname, filepath);
+                }
+            
+            default:
+                break;
         }
     }
 }
 
-// TO BE FIXED --> it doesn't print anything before -l command; I have to change something in the implementation of this function 
-void printSymbolicLinkInfo(char *linkpath, char *options) {
+void printSymbolicLinkInfo(char *linkpath) {
     
     struct stat filestat;
+    struct stat targetstat;
+
+    char options[20];
+
+    if(scanf("%20s", options) != 1) {
+        perror("Scanf failed.\n");
+        menu_SymbolicLink();
+    }
+
+    int numberOfOptions = strlen(options);
     
     if(lstat(linkpath, &filestat) == -1) {
         printf("Error: %s\n", strerror(errno));
         return;
     }
 
-    if (strchr(options, 'n') != NULL) {
-        printf("\nName: %s\n", linkpath);
-    }
+    for(int i = 1; i < numberOfOptions; i++) {
+        
+        switch (options[i]) {
+        
+        case 'n':
+            printf("\nName: %s\n", linkpath);
+            break;
+        
+        case 'd':
+            printf("\nSize of symbolic link: %ld bytes\n", filestat.st_size);
+            break;
+        
+        case 't':
+          
+            if(stat(linkpath, &targetstat) == -1) {
+                printf("Error: %s\n", strerror(errno));
+                return;
+            }
+            if(S_ISREG(targetstat.st_mode)) {
+                printf("\nSize of target file: %ld bytes\n", targetstat.st_size);
+            } else {
+                printf("\nTarget file is not a regular file.\n");
+            }
+            break;
 
-    if (strchr(options, 'l') != NULL) {
-        if(unlink(linkpath) == -1) {
-            printf("\nError: %s\n", strerror(errno));
-        } else {
-            printf("\nSymbolic link deleted.\n");
-            return;
+        case 'a':
+            printAccessRights(filestat);
+            break;
+        
+        case 'l':
+            if(unlink(linkpath) == -1) {
+                printf("\nError: %s\n", strerror(errno));
+            } else {
+                printf("\nSymbolic link deleted.\n");
+                return;
+            }
+            break;
+        
+        default:
+            break;
         }
-    }
-
-    if(strchr(options, 'd') != NULL && strchr(options, 'l') == NULL) {
-        printf("\nSize of symbolic link: %ld bytes\n", filestat.st_size);
-    }
-
-    if(strchr(options, 't') != NULL && strchr(options, 'l') == NULL) {
-        struct stat targetstat;
-        if(stat(linkpath, &targetstat) == -1) {
-            printf("Error: %s\n", strerror(errno));
-            return;
-        }
-        if(S_ISREG(targetstat.st_mode)) {
-            printf("\nSize of target file: %ld bytes\n", targetstat.st_size);
-        } else {
-            printf("\nTarget file is not a regular file.\n");
-        }
-    }
-
-    if(strchr(options, 'a') != NULL && strchr(options, 'l') == NULL) {
-        printAccessRights(filestat);
     }
 }
-
 
 void printArgumentsInfo(char *path) {
     
     struct stat filestat;
-    char options[10];
-
+   
     printf("\n%s", path);
     
     if(lstat(path, &filestat) == -1) {
@@ -163,17 +193,17 @@ void printArgumentsInfo(char *path) {
     switch (filestat.st_mode & S_IFMT) {
         case S_IFREG:
             printf("- REGULAR FILE\n");
-            menu_RegularFiles(options);
-            printRegularFileInfo(path, options);
+            menu_RegularFiles();
+            printRegularFileInfo(path);
             break;
         case S_IFDIR:
             printf(" - DIRECTORY\n");
-            menu_Directory(options);
+            menu_Directory();
             break;
         case S_IFLNK:
             printf(" - SYMBOLIC LINK\n");
-            menu_SymbolicLink(options);
-            printSymbolicLinkInfo(path, options);
+            menu_SymbolicLink();
+            printSymbolicLinkInfo(path);
             break;
         default:
             printf("File type not supported.\n");
