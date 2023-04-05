@@ -9,7 +9,7 @@
 #include <grp.h>
 #include <time.h>
 
-//Note: TO BE MODIFIED: the formatted scanf 
+
 int checkArguments(int argc) {
     if(argc < 2) {
         perror("Incorrect number of arguments! Usage: ./a.out <file/directory/link> ...\n");
@@ -26,7 +26,7 @@ void menu_RegularFiles(){
 
 void menu_Directory(){
     printf("\n----  MENU ----\n");
-    printf("-n: name\n");
+    printf("-n: name\n-d: size\n-c: total number of files with .c extension\n");
     printf("\nPlease, enter your options: ");
 }
 
@@ -59,16 +59,34 @@ void printAccessRights(struct stat filestat) {
 void printRegularFileInfo(char *filepath) {
     
     char options[20];
+    int numberOfOptions;
+    int flag;
     
     struct stat filestat;
-    
-    if(scanf("%20s", options) != 1) {
-        perror("Scanf failed.\n");
-        menu_RegularFiles();
-    }
 
-    int numberOfOptions = strlen(options);
-    
+    do {
+        if(scanf("%20s", options) != 1) {
+            perror("Scanf failed.\n");
+        }
+        flag = 1;
+        numberOfOptions = strlen(options);
+
+        if (options[0] != '-' || numberOfOptions < 2) {
+            printf("The input you provided is not valid! Please give '-', followed by a string consisting of options. Ex: -nd\n");
+            menu_RegularFiles();
+            flag = 0;
+        }
+        else {
+            for (int i = 1; i < numberOfOptions; i++){
+                if (!strchr("nmahdl", options[i])){
+                    printf("The input you provided is not valid! Please give '-', followed by a string consisting of options. Ex: -nd\n");
+                    flag = 0;
+                    menu_RegularFiles();
+                    break;
+                }
+            }
+        }
+    }while(!flag);
 
     if(lstat(filepath, &filestat) == -1) {
         printf("Error: %s\n", strerror(errno));
@@ -122,13 +140,32 @@ void printSymbolicLinkInfo(char *linkpath) {
     struct stat targetstat;
 
     char options[20];
+    int numberOfOptions;
+    int flag;
+    
+    do {
+        if(scanf("%20s", options) != 1) {
+            perror("Scanf failed.\n");
+        }
+        flag = 1;
+        numberOfOptions = strlen(options);
 
-    if(scanf("%20s", options) != 1) {
-        perror("Scanf failed.\n");
-        menu_SymbolicLink();
-    }
-
-    int numberOfOptions = strlen(options);
+        if (options[0] != '-' || numberOfOptions < 2) {
+            printf("The input you provided is not valid! Please give '-', followed by a string consisting of options. Ex: -nd\n");
+            menu_RegularFiles();
+            flag = 0;
+        }
+        else {
+            for (int i = 1; i < numberOfOptions; i++){
+                if (!strchr("ndtal", options[i])){
+                    printf("The input you provided is not valid! Please give '-', followed by a string consisting of options. Ex: -nd\n");
+                    flag = 0;
+                    menu_RegularFiles();
+                    break;
+                }
+            }
+        }
+    }while(!flag);
     
     if(lstat(linkpath, &filestat) == -1) {
         printf("Error: %s\n", strerror(errno));
@@ -179,6 +216,7 @@ void printSymbolicLinkInfo(char *linkpath) {
     }
 }
 
+
 void printArgumentsInfo(char *path) {
     
     struct stat filestat;
@@ -199,6 +237,7 @@ void printArgumentsInfo(char *path) {
         case S_IFDIR:
             printf(" - DIRECTORY\n");
             menu_Directory();
+            //printDirectoryInfo(path);
             break;
         case S_IFLNK:
             printf(" - SYMBOLIC LINK\n");
