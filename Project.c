@@ -36,38 +36,34 @@ void menu_SymbolicLink() {
     printf("\nPlease, enter your options: ");
 }
 
-void printAccessRights(struct stat filestat) {
+void printAccessRights(struct stat st) {
     
     printf("\nAccess rights:\n");
 
     printf("\nUSER:\n-read: %s\n-write: %s\n-execute: %s\n", 
-           (filestat.st_mode & S_IRUSR) ? "yes" : "no",
-           (filestat.st_mode & S_IWUSR) ? "yes" : "no",
-           (filestat.st_mode & S_IXUSR) ? "yes" : "no");
+           (st.st_mode & S_IRUSR) ? "yes" : "no",
+           (st.st_mode & S_IWUSR) ? "yes" : "no",
+           (st.st_mode & S_IXUSR) ? "yes" : "no");
 
     printf("\nGROUP:\n-read: %s\n-write: %s\n-execute: %s\n", 
-           (filestat.st_mode & S_IRGRP) ? "yes" : "no",
-           (filestat.st_mode & S_IWGRP) ? "yes" : "no",
-           (filestat.st_mode & S_IXGRP) ? "yes" : "no");
+           (st.st_mode & S_IRGRP) ? "yes" : "no",
+           (st.st_mode & S_IWGRP) ? "yes" : "no",
+           (st.st_mode & S_IXGRP) ? "yes" : "no");
 
     printf("\nOTHERS:\n-read: %s\n-write: %s\n-execute: %s\n", 
-           (filestat.st_mode & S_IROTH) ? "yes" : "no",
-           (filestat.st_mode & S_IWOTH) ? "yes" : "no",
-           (filestat.st_mode & S_IXOTH) ? "yes" : "no");
+           (st.st_mode & S_IROTH) ? "yes" : "no",
+           (st.st_mode & S_IWOTH) ? "yes" : "no",
+           (st.st_mode & S_IXOTH) ? "yes" : "no");
 }
 
 void printRegularFileInfo(char *filepath) {
     
-    struct stat filestat;
+    struct stat st;
 
     char options[20];
     int numberOfOptions;
     
     int flag;
-/*
-
-scanf("%[-][nmahdl]", option);
-*/
     
     do {
         if(scanf("%20s", options) != 1) {
@@ -94,7 +90,7 @@ scanf("%[-][nmahdl]", option);
         }
     }while(!flag);
 
-    if(lstat(filepath, &filestat) == -1) {
+    if(lstat(filepath, &st) == -1) {
         printf("Error: %s\n", strerror(errno));
         return;
     }
@@ -108,19 +104,19 @@ scanf("%[-][nmahdl]", option);
                 break;
             
             case 'm':
-                printf("\nLast modified: %s", ctime(&filestat.st_mtime));
+                printf("\nLast modified: %s", ctime(&st.st_mtime));
                 break;
             
             case 'a':
-                printAccessRights(filestat);
+                printAccessRights(st);
                 break;
             
             case 'h':
-                printf("\nHard link count: %ld\n", filestat.st_nlink);
+                printf("\nHard link count: %ld\n", st.st_nlink);
                 break;
             
             case 'd':
-                printf("\nSize: %ld bytes\n", filestat.st_size);
+                printf("\nSize: %ld bytes\n", st.st_size);
                 break;
             
             case 'l':
@@ -142,7 +138,7 @@ scanf("%[-][nmahdl]", option);
 
 void printSymbolicLinkInfo(char *linkpath) {
     
-    struct stat filestat;
+    struct stat st;
     struct stat targetstat;
 
     char options[20];
@@ -159,7 +155,7 @@ void printSymbolicLinkInfo(char *linkpath) {
 
         if (options[0] != '-' || numberOfOptions < 2) {
             printf("The input you provided is not valid! Please give '-', followed by a string consisting of options. Ex: -nd\n");
-            menu_RegularFiles();
+            menu_SymbolicLink();
             flag = 0;
         }
         else {
@@ -167,14 +163,14 @@ void printSymbolicLinkInfo(char *linkpath) {
                 if (!strchr("ndtal", options[i])) {
                     printf("The input you provided is not valid! Please give '-', followed by a string consisting of options. Ex: -nd\n");
                     flag = 0;
-                    menu_RegularFiles();
+                    menu_SymbolicLink();
                     break;
                 }
             }
         }
     }while(!flag);
     
-    if(lstat(linkpath, &filestat) == -1) {
+    if(lstat(linkpath, &st) == -1) {
         printf("Error: %s\n", strerror(errno));
         return;
     }
@@ -188,11 +184,10 @@ void printSymbolicLinkInfo(char *linkpath) {
             break;
         
         case 'd':
-            printf("\nSize of symbolic link: %ld bytes\n", filestat.st_size);
+            printf("\nSize of symbolic link: %ld bytes\n", st.st_size);
             break;
         
         case 't':
-          
             if(stat(linkpath, &targetstat) == -1) {
                 printf("Error: %s\n", strerror(errno));
                 return;
@@ -205,7 +200,7 @@ void printSymbolicLinkInfo(char *linkpath) {
             break;
 
         case 'a':
-            printAccessRights(filestat);
+            printAccessRights(st);
             break;
         
         case 'l':
@@ -240,7 +235,7 @@ void printDirectoryInfo(char *dirpath) {
 
         if (options[0] != '-' || numberOfOptions < 2) {
             printf("The input you provided is not valid! Please give '-', followed by a string consisting of options. Ex: -nd\n");
-            menu_RegularFiles();
+            menu_Directory();
             flag = 0;
         }
         else {
@@ -248,7 +243,7 @@ void printDirectoryInfo(char *dirpath) {
                 if (!strchr("ndac", options[i])) {
                     printf("The input you provided is not valid! Please give '-', followed by a string consisting of options. Ex: -nd\n");
                     flag = 0;
-                    menu_RegularFiles();
+                    menu_Directory();
                     break;
                 }
             }
@@ -272,7 +267,7 @@ void printDirectoryInfo(char *dirpath) {
             
             case 'd':
                 if (stat(dirpath, &st) == -1) {
-                    perror("Error getting file status");
+                    perror("Error getting file st");
                     return;
                 }
                 printf("\nDirectory size: %ld bytes\n", st.st_size);
@@ -289,7 +284,7 @@ void printDirectoryInfo(char *dirpath) {
                     char path[1024];
                     snprintf(path, sizeof(path), "%s/%s", dirpath, entry->d_name);
                     if (stat(path, &st) == -1) {
-                        perror("Error getting file status");
+                        perror("Error getting file st");
                         return;
                     }
                     if (S_ISREG(st.st_mode) && strstr(entry->d_name, ".c") != NULL) {
@@ -305,20 +300,18 @@ void printDirectoryInfo(char *dirpath) {
     }
 }
 
-
-
 void printArgumentsInfo(char *path) {
     
-    struct stat filestat;
+    struct stat st;
    
     printf("\n%s", path);
     
-    if(lstat(path, &filestat) == -1) {
+    if(lstat(path, &st) == -1) {
         printf("Error: %s\n", strerror(errno));
         return;
     }
 
-    switch (filestat.st_mode & S_IFMT) {
+    switch (st.st_mode & S_IFMT) {
         case S_IFREG:
             printf("- REGULAR FILE\n");
             menu_RegularFiles();
