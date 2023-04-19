@@ -9,11 +9,12 @@
 #include <grp.h>
 #include <time.h>
 #include <dirent.h>
+#include <sys/wait.h>
 
 int checkArguments(int argc) {
     if(argc < 2) {
         perror("Incorrect number of arguments! Usage: ./a.out <file/directory/link> ...\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     return 0;
 }
@@ -61,9 +62,8 @@ void printRegularFileInfo(char *filepath) {
     struct stat st;
 
     char options[20];
-    int numberOfOptions;
-    
-    int flag;
+    int numberOfOptions, hasCExtension, flag;
+    pid_t pid;
     
     do {
         if(scanf("%20s", options) != 1) {
@@ -95,6 +95,27 @@ void printRegularFileInfo(char *filepath) {
         return;
     }
 
+    hasCExtension = strstr(filepath, ".c") != NULL;
+
+    if (hasCExtension) {
+        
+        pid = fork();
+
+        if (pid < 0) {
+            perror("Fork failed.\n");
+            return;
+        } 
+        else if (pid == 0) {
+            execlp("./script.sh", "./script.sh", filepath, NULL);
+            perror("Exec failed.\n");
+            return;
+        }
+        else {
+            int status;
+            wait(&status);
+        }
+    }
+
     for(int i = 1; i < numberOfOptions; i++) {
         
         switch (options[i]) {
@@ -104,7 +125,7 @@ void printRegularFileInfo(char *filepath) {
                 break;
             
             case 'm':
-                printf("\nLast modified: %s", ctime(&st.st_mtime));
+                printf("\nTime of last modification: %s", ctime(&st.st_mtime));
                 break;
             
             case 'a':
@@ -126,7 +147,8 @@ void printRegularFileInfo(char *filepath) {
                 
                 if (symlink(filepath, linkname) == -1) {
                     printf("\nError creating symbolic link: %s\n", strerror(errno));
-                } else {
+                } 
+                else {
                     printf("\nSymbolic link created: %s -> %s\n", linkname, filepath);
                 }
             
@@ -142,9 +164,7 @@ void printSymbolicLinkInfo(char *linkpath) {
     struct stat targetstat;
 
     char options[20];
-    int numberOfOptions;
-    
-    int flag;
+    int numberOfOptions, flag;
     
     do {
         if(scanf("%20s", options) != 1) {
@@ -206,8 +226,9 @@ void printSymbolicLinkInfo(char *linkpath) {
         case 'l':
             if(unlink(linkpath) == -1) {
                 printf("\nError: %s\n", strerror(errno));
-            } else {
-                printf("\nSymbolic link deleted.\n");
+            } 
+            else {
+                printf("\nSymbolic link deleted. Other following options cannot be provided.\n");
                 return;
             }
             break;
@@ -221,10 +242,9 @@ void printSymbolicLinkInfo(char *linkpath) {
 void printDirectoryInfo(char *dirpath) {
 
     char options[20];
-    int numberOfOptions;
+    int numberOfOptions, flag;
     struct stat st;
-    
-    int flag;
+    pid_t pid;
     
     do {
         if(scanf("%20s", options) != 1) {
@@ -257,12 +277,40 @@ void printDirectoryInfo(char *dirpath) {
         return;
     }
 
+    pid = fork();
+
+    if (pid < 0) {
+        perror("Fork failed.\n");
+        return;
+    }
+    else if (pid == 0) {
+        char filename[1024];
+        snprintf(filename, sizeof(filename), "%s/%s_file.txt", dirpath, dirpath);
+
+        FILE *fp = fopen(filename, "w");
+        
+        if (fp == NULL) {
+            perror("Error creating file");
+            return;
+        }   
+        fclose(fp);
+        printf("\n------------------------------------\n");
+        printf("\nThe provided argument is a directory. In addition, a corresponding txt file will be created:");
+        printf("\nFile created: %s\n", filename);
+        printf("\n------------------------------------\n");
+        exit(EXIT_SUCCESS);
+    }
+    else {
+        int status;
+        wait(&status);
+    }
+
     for(int i = 1; i < numberOfOptions; i++) {
         
         switch (options[i]) {
             
             case 'n':
-                printf("\nDirectory name: %s\n", dirpath);
+                printf("\nName: %s\n", dirpath);
                 break;
             
             case 'd':
@@ -270,7 +318,7 @@ void printDirectoryInfo(char *dirpath) {
                     perror("Error getting file st");
                     return;
                 }
-                printf("\nDirectory size: %ld bytes\n", st.st_size);
+                printf("\nSize: %ld bytes\n", st.st_size);
                 break;
             
             case 'a':
@@ -291,7 +339,7 @@ void printDirectoryInfo(char *dirpath) {
                         count++;
                     }
                 }
-                printf("\nNumber of C files: %d\n", count);
+                printf("\nTotal number of files with .c extension: %d\n", count);
                 break;
             
             default:
@@ -312,24 +360,29 @@ void printArgumentsInfo(char *path) {
     }
 
     switch (st.st_mode & S_IFMT) {
+        
         case S_IFREG:
             printf("- REGULAR FILE\n");
             menu_RegularFiles();
             printRegularFileInfo(path);
             break;
+        
         case S_IFDIR:
             printf(" - DIRECTORY\n");
             menu_Directory();
             printDirectoryInfo(path);
             break;
+        
         case S_IFLNK:
             printf(" - SYMBOLIC LINK\n");
             menu_SymbolicLink();
             printSymbolicLinkInfo(path);
             break;
+        
         default:
             printf("File type not supported.\n");
             break;
+
     }
 }
 
@@ -337,10 +390,31 @@ void printArgumentsInfo(char *path) {
 int main(int argc, char *argv[]) {
 
     checkArguments(argc);
+    
+    int i, status;
 
-    for(int i = 1; i < argc; i++) {
-        printArgumentsInfo(argv[i]);
+    for(i = 1; i < argc; i++) {
+
+        pid_t pid = fork();
+
+        if(pid < 0) {
+            perror("Fork failed.");
+            exit(EXIT_FAILURE);
+        } 
+        
+        else if(pid == 0) {
+            // Child process
+            printArgumentsInfo(argv[i]);
+            exit(EXIT_SUCCESS);
+        }
+        
+        else {
+            // Parent process
+            waitpid(pid, &status, 0);
+        }
     }
-   
+
     return 0;
 }
+
+
