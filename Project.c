@@ -95,27 +95,6 @@ void printRegularFileInfo(char *filepath) {
         return;
     }
 
-    hasCExtension = strstr(filepath, ".c") != NULL;
-
-    if (hasCExtension) {
-        
-        pid = fork();
-
-        if (pid < 0) {
-            perror("Fork failed.\n");
-            return;
-        } 
-        else if (pid == 0) {
-            execlp("./script.sh", "./script.sh", filepath, NULL);
-            perror("Exec failed.\n");
-            return;
-        }
-        else {
-            int status;
-            wait(&status);
-        }
-    }
-
     for(int i = 1; i < numberOfOptions; i++) {
         
         switch (options[i]) {
@@ -154,6 +133,30 @@ void printRegularFileInfo(char *filepath) {
             
             default:
                 break;
+        }
+    }
+    
+    hasCExtension = strstr(filepath, ".c") != NULL;
+
+    if (hasCExtension) {
+        
+        pid = fork();
+
+        if (pid < 0) {
+            perror("Fork failed.\n");
+            return;
+        } 
+        else if (pid == 0) {
+            execlp("./script.sh", "./script.sh", filepath, NULL);
+            exit(EXIT_SUCCESS);
+            return;
+        }
+        else {
+            int status, w;
+            w = wait(&status);
+           if(WIFEXITED(status)){
+               printf("(Child process with pid %d, exited with status %d)\n", w, WEXITSTATUS(status));
+           }
         }
     }
 }
@@ -277,34 +280,6 @@ void printDirectoryInfo(char *dirpath) {
         return;
     }
 
-    pid = fork();
-
-    if (pid < 0) {
-        perror("Fork failed.\n");
-        return;
-    }
-    else if (pid == 0) {
-        char filename[1024];
-        snprintf(filename, sizeof(filename), "%s/%s_file.txt", dirpath, dirpath);
-
-        FILE *fp = fopen(filename, "w");
-        
-        if (fp == NULL) {
-            perror("Error creating file");
-            return;
-        }   
-        fclose(fp);
-        printf("\n------------------------------------\n");
-        printf("\nThe provided argument is a directory. In addition, a corresponding txt file will be created:");
-        printf("\nFile created: %s\n", filename);
-        printf("\n------------------------------------\n");
-        exit(EXIT_SUCCESS);
-    }
-    else {
-        int status;
-        wait(&status);
-    }
-
     for(int i = 1; i < numberOfOptions; i++) {
         
         switch (options[i]) {
@@ -346,6 +321,38 @@ void printDirectoryInfo(char *dirpath) {
                 break;
         }
     }
+
+    
+    pid = fork();
+
+    if (pid < 0) {
+        perror("Fork failed.\n");
+        return;
+    }
+    else if (pid == 0) {
+        char filename[1024];
+        snprintf(filename, sizeof(filename), "%s/%s_file.txt", dirpath, dirpath);
+
+        FILE *fp = fopen(filename, "w");
+        
+        if (fp == NULL) {
+            perror("Error creating file");
+            return;
+        }   
+        fclose(fp);
+        printf("\n------------------------------------\n");
+        printf("\nThe provided argument is a directory. In addition, a corresponding txt file will be created:");
+        printf("\nFile created: %s\n", filename);
+        //printf("\n------------------------------------\n");
+        exit(EXIT_SUCCESS);
+    }
+    else {
+            int status, w;
+            w = wait(&status);
+           if(WIFEXITED(status)){
+               printf("(Child process with pid %d, exited with status %d)\n", w, WEXITSTATUS(status));
+           }
+        }
 }
 
 void printArgumentsInfo(char *path) {
@@ -405,6 +412,9 @@ int main(int argc, char *argv[]) {
         else if(pid == 0) {
             // Child process
             printArgumentsInfo(argv[i]);
+            printf("\n");
+            printf("*******************************************");
+            printf("\n");
             exit(EXIT_SUCCESS);
         }
         
