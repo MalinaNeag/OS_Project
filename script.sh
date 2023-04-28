@@ -16,4 +16,4 @@ num_warnings=$(echo "$gcc_output" | grep -c 'warning')
 
 echo "Errors: $num_errors"
 echo "Warnings: $num_warnings"
-echo -e "\n------------------------------------\n"
+
