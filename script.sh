@@ -7,13 +7,15 @@ if [[ ! -f "$file" ]]; then
     exit 1
 fi
 
-echo -e "\n------------------------------------\n"
-echo "The provided argument is a C file. In addition, it will be compiled:"
+if [[ ${file: -2} != ".c" ]]; then
+    echo "Error: $file is not a C file"
+    exit 1
+fi
 
-gcc_output=$(gcc -Wall -Wextra "$file" 2>&1)
-num_errors=$(echo "$gcc_output" | grep -c 'error')
-num_warnings=$(echo "$gcc_output" | grep -c 'warning')
+output=$(gcc -o /dev/null -Wall -Wextra -pedantic-errors "$file" 2>&1)
+errors=$(echo "$output" | grep -c "error:")
+warnings=$(echo "$output" | grep -c "warning:")
 
-echo "Errors: $num_errors"
-echo "Warnings: $num_warnings"
+echo "$errors $warnings"
 
+exit 0
