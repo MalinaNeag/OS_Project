@@ -59,21 +59,46 @@ Note that if the -l option is given, the other following options will no longer 
 - Access rights (-a)
 - Total number of files with the .c extension (-c)
 
-### II. Child Processes
+### II. Child Processes and Pipes
 
-The parent process will create for each argument one child process that will handle the options introduced by the user (for each file type we have the corresponding options):
+The parent process will create for each argument one child process that will handle the next features:
 
 #### Regular File with .c Extension
 
-If the argument is a regular file with the .c extension, the parent will create one more process (a second child process) that will execute a script.
+If the argument is a regular file with the .c extension, the parent will create one more process (a second child process) that will execute a script which compiles the file and prints at standard output the number of errors and the number of warnings.
+The output data of the script will be send to the parent process which will compute a score based on number of errors and warnings:
 
-Script requirement: Having a regular file with the .c extension given as an argument, the script should compile the file and print at standard output the number of errors and the number of warnings.
+- 0 errors and 0 warnings: 10
+
+- at least one error: 1
+
+- no errors, but more than 10 warnings: 2
+
+- no errors, but maximum 10 warnings: 2 + 8*(10 – number_of_warnings)/10.
+
+The parent writes the following message in a file named grades.txt: "<FILE_NAME>: <SCORE>".
+
+#### Regular File without .c Extension
+
+If the argument is a regular file but doesn't have the .c extension, the second child prints the number of lines.
 
 #### Directory
 
 If the argument is a directory, the parent will create a second child process that will execute a command for creating a file with the .txt extension and a specific name (e.g., dirName_file.txt).
 
-The parent process must properly receive the return state of its child processes. All child processes must run in parallel with each other.
+#### Symbolic link
+
+If the argument is a symbolic link, the second child process will execute a command for changing the permissions of the symbolic link as it follows:
+
+- read, write and execution rights for the user
+- read and write rights for the group (no execution rights should be granted for the group of user!)
+- no read, write or execution rights for other users
+
+The parent process receives the return state of its child processes and prints the following message 
+
+```
+The process with PID <PID> has ended with the exit code <EXIT_CODE>
+```
 
 ## Usage
 
