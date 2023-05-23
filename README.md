@@ -1,12 +1,12 @@
-# Unix File System Program
+# 📁 Unix File System Program
 
 This is a C program that uses system calls and library functions in Unix to take multiple arguments representing paths to regular files / directories / symbolic links.
 
-## Functionality
+## ⚙️ Functionality
 
 The program provides the following functionalities:
 
-### I. File Type Menu
+### 📚 I. File Type Menu 
 
 The program will pass through all the arguments, and for each file, depending on the file type, the name of the file and the type of the file will be displayed. After that, an interactive menu will be displayed, with all the options available for that specific file type.
 
@@ -16,7 +16,7 @@ After entering the options string, the information about that file will be print
 
 If one of the letters of the string is not a valid option, an error message will be displayed and the menu will appear again.
 
-#### Regular File
+####  📄 Regular File
 
 - Name (-n)
 - Size (-d)
@@ -42,7 +42,7 @@ Others:
 - Write - no
 - Exec - no
 
-#### Symbolic Link
+#### 🔗 Symbolic Link
 
 - Name (-n)
 - Delete symbolic link (-l)
@@ -52,18 +52,18 @@ Others:
 
 Note that if the -l option is given, the other following options will no longer be performed
 
-#### Directory
+#### 📂 Directory 
 
 - Name (-n)
 - Size (-d)
 - Access rights (-a)
 - Total number of files with the .c extension (-c)
 
-### II. Child Processes and Pipes
+### ⛓️ II. Child Processes and Pipes 
 
 The parent process will create for each argument one child process that will handle the next features:
 
-#### Regular File with .c Extension
+#### 💻 Regular File with .c Extension
 
 If the argument is a regular file with the .c extension, the parent will create one more process (a second child process) that will execute a script which compiles the file and prints at standard output the number of errors and the number of warnings.
 The output data of the script will be send to the parent process which will compute a score based on number of errors and warnings:
@@ -78,15 +78,15 @@ The output data of the script will be send to the parent process which will comp
 
 The parent writes the following message in a file named grades.txt: "<FILE_NAME>: <SCORE>".
 
-#### Regular File without .c Extension
+#### 📄  Regular File without .c Extension
 
 If the argument is a regular file but doesn't have the .c extension, the second child prints the number of lines.
 
-#### Directory
+#### 📂 Directory 
 
 If the argument is a directory, the parent will create a second child process that will execute a command for creating a file with the .txt extension and a specific name (e.g., dirName_file.txt).
 
-#### Symbolic link
+#### 🔗 Symbolic link 
 
 If the argument is a symbolic link, the second child process will execute a command for changing the permissions of the symbolic link as it follows:
 
@@ -100,7 +100,7 @@ The parent process receives the return state of its child processes and prints t
 The process with PID <PID> has ended with the exit code <EXIT_CODE>
 ```
 
-## Usage
+## 💡 Usage
 
 To use this program, run the following command:
 
