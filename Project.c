@@ -12,12 +12,6 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 
-/*
-TO BE FIXED until MONDAY:
--the printing of the menu 
--the printing to grades.txt, because the content is overwritten for each .C argument
-*/
-
 
 int checkArguments(int argc) {   
     if(argc < 2) {
@@ -45,22 +39,19 @@ void menu_SymbolicLink() {
     printf("\nPlease, enter your options: ");
 }
 
-void waitForChildren(){
+void waitForChildren() {
     
     int status;
     pid_t awaited_child;
 
-    awaited_child = wait(&status);
-
-    while(awaited_child > 0){
-        if(WIFEXITED(status)){
+    for (int i = 1; i <= 2; i++) {
+        awaited_child = wait(&status);
+        if(WIFEXITED(status)) {
             printf("\nChild process with PID %d has terminated normally with code %d.\n\n", awaited_child, WEXITSTATUS(status));
         }
-        else{
+        else {
             printf("\nChild process with PID %d has terminated abnormally with code %d.\n\n", awaited_child, WEXITSTATUS(status));
         }
-
-        awaited_child = wait(&status);
     }
 
 }
@@ -105,7 +96,7 @@ void createNewTxtFile(char* dirpath, struct stat st) {
     }
 
     else if(pid > 0) {
-        waitForChildren();
+        // waitForChildren();
     }
 
 }
@@ -120,8 +111,7 @@ void setPermissions(char* linkpath, struct stat* st) {
     }
 
     if(pid == 0) {
-        int check;
-        check = execlp("chmod", "chmod", "u+rwx,g+rw-x,o-rwx", linkpath, NULL);
+        int check = execlp("chmod", "chmod", "u+rwx,g+rw-x,o-rwx", linkpath, NULL);
         if(check == -1){
             perror(strerror(errno));
             exit(errno);
@@ -129,11 +119,11 @@ void setPermissions(char* linkpath, struct stat* st) {
     }
 
     else if(pid > 0) {
-        waitForChildren();
+       // waitForChildren();
     }
 }
 
-void compileCFile(char* filepath, struct stat st, int fd) {
+void compileCFile(char* filepath, struct stat st) {
    
     pid_t pid;
     int pfd[2];
@@ -155,9 +145,8 @@ void compileCFile(char* filepath, struct stat st, int fd) {
         close(pfd[0]);
 
         if(hasCExtension) {
-            int check;
             dup2(pfd[1], 1);
-            check = execlp("bash", "bash", "script.sh", filepath, NULL);
+            int check = execlp("bash", "bash", "script.sh", filepath, NULL);
             if(check == -1){
                 perror(strerror(errno));
                 exit(errno);
@@ -165,84 +154,69 @@ void compileCFile(char* filepath, struct stat st, int fd) {
         }
 
         if (!hasCExtension) {
-            printf("\n");
-            printf("(The argument is a regular file. In addition, the number of lines will be displayed: ");
-            
-            char command[100];
-            char* filename = strtok(filepath, "\n");
-            
-            snprintf(command, sizeof(command), "wc -l %s", filename);
-
-            FILE* wc_output = popen(command, "r");
-            
-            if (wc_output == NULL) {
+            int check = execlp("wc", "wc", "-l", filepath, NULL);
+            if(check == -1){
                 perror(strerror(errno));
                 exit(errno);
             }
-
-            int line_count = 0;
-
-            if (fscanf(wc_output, "%d", &line_count) != 1) {
-                perror(strerror(errno));
-                exit(errno);
-            }
-
-            if (pclose(wc_output) == -1) {
-                perror(strerror(errno));
-                exit(errno);
-            }
-
-            printf("%d)\n", line_count);
+            
         }
         exit(EXIT_SUCCESS);
     }
 
-    else if(pid > 0){
+    else if(pid > 0) {
+        
+       // waitForChildren();
 
-        if(hasCExtension){
+        if(hasCExtension) {
                         
             int errors = 0, warnings = 0, score=0;
 
             close(pfd[1]);
+
+            char buff[5];
+
+            int check = read(pfd[0], buff, 5);
+            if(check == -1) {
+                perror(strerror(errno));
+                exit(errno);
+            }
+
+            sscanf(buff, "%d %d", &errors, &warnings);
+           
+            printf("\nErrors: %d\nWarnings: %d\n", errors, warnings);
             
-            FILE* stream = fdopen(pfd[0],"r");;
-            
-            fscanf(stream, "%d %d", &errors, &warnings);
-            printf("Errors: %d\nWarnings: %d\n", errors, warnings);
-            
-            if(errors == 0 && warnings == 0){
+            if(errors == 0 && warnings == 0) {
                 score = 10;
             }
 
-            if(errors >= 1){
+            if(errors >= 1) {
                 score = 1;
             }
 
-            if(errors == 0 && warnings > 10){
+            if(errors == 0 && warnings > 10) {
                 score = 2;
             }
 
-            if(errors == 0 && warnings <= 10){
+            if(errors == 0 && warnings <= 10) {
                 score = 2 + 8 * (10 - warnings) / 10;
             }
-            
+
+            int fd = open("grades.txt", O_RDWR | O_APPEND | O_CREAT, S_IRWXU );
             if (fd == -1) {
                 perror("Error opening file.\n");
                 exit(EXIT_FAILURE);
             }
               
-            char filename[1000];
+            char filename[1000], string[1024];
+            
             snprintf(filename, sizeof(filename), "%s", filepath);
-            //dprintf(fd, "%s: %d\n", filename, score);
-            //close(fd);
-            //close(pfd[0]);
-            char string[1024];
             sprintf(string, "%s : %d\n", filename, score);
             write(fd, string, strlen(string));
             close(fd);
-            close(pfd[0]);
         }
-        waitForChildren();
+        close(pfd[0]);
+       
     }  
 }
 
@@ -527,8 +501,6 @@ void printArgumentsInfo(char* path) {
 void createProcesses(char* path) {
     
     struct stat st;
-   // int fd = open("grades.txt", O_RDWR | O_CREAT, S_IRWXU);
-     int fd = open("grades.txt", O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU );
 
     if(lstat(path, &st) == -1) {
         perror(strerror(errno));
@@ -538,7 +510,7 @@ void createProcesses(char* path) {
     switch (st.st_mode & S_IFMT) {
      
         case S_IFREG:
-            compileCFile(path, st, fd);
+            compileCFile(path, st);
             break;
      
         case S_IFDIR:
@@ -578,7 +550,7 @@ int main(int argc, char* argv[]) {
         
         else if(pid > 0) {          
             createProcesses(argv[i]);
-            waitForChildren();            
+            waitForChildren();          
         }
     }
     return 0;    
