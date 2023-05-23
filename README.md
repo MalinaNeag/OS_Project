@@ -88,7 +88,7 @@ If the argument is a directory, the parent will create a second child process th
 
 #### 🔗 Symbolic link 
 
-If the argument is a symbolic link, the second child process will execute a command for changing the permissions of the symbolic link as it follows:
+If the argument is a symbolic link, the second child process will execute a command for changing the permissions of its target file as it follows:
 
 - read, write and execution rights for the user
 - read and write rights for the group (no execution rights should be granted for the group of user!)
