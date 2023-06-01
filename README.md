@@ -1,4 +1,4 @@
-# 📁 Unix File System Program
+# 📁 Operating Systems Laboratory Project - Unix File System Program 
 
 This is a C program that uses system calls and library functions in Unix to take multiple arguments representing paths to regular files / directories / symbolic links.
 
